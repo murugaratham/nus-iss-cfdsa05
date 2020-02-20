@@ -20,3 +20,7 @@ spec:
         backend:
           serviceName: myapp-svcv1
           servicePort: 80
+      - path: /v2
+        backend:
+          serviceName: myapp-svcv2
+          servicePort: 80
