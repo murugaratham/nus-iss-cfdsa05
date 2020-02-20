@@ -7,9 +7,6 @@ metadata:
     nginx.ingress.kubernetes.io/ssl-redirect: "false"
     nginx.ingress.kubernetes.io/use-regex: "true"
 spec:
-  backend:
-    serviceName: myapp-svcv2
-    servicePort: 80
   rules:
   - http:
       paths:
