@@ -1,47 +1,85 @@
 ---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: northwind-secret
+  namespace: northwind-ns
+  labels:
+    name: northwind-secret
+data:
+  DB_PASSWORD: Y2hhbmdlaXQ=
+---
 apiVersion: apps/v1
 kind: Deployment
+
 metadata:
-   name: northwind-app-deploy
-   namespace: northwind-ns
-   labels:
-      name: northwind-app
-      tier: app
+  name: northwind-deploy
+  namespace: northwind-ns
+  labels:
+    name: northwind
+    version: "v2"
 
 spec:
-   replicas: 2
-   selector:
-      matchLabels:
-         name: northwind-app-pod
-
-   strategy:
-      type: RollingUpdate
-      rollingUpdate:
-         maxSurge: 1
-         maxUnavailable: 1
-   template:
-      metadata:
-         name: northwind-app-pod
-         labels:
-            name: northwind-app-pod
-      spec:
-         containers:
-         - name: northwind-app-container
-           image: stackupiss/northwind-app:v2
-           imagePullPolicy: Always
-           ports:
-           - name: app-port
-             containerPort: 3000
-           env:
-           - name: DB_PASSWORD
-             valueFrom:
+  replicas: 3
+  selector:
+    matchLabels:
+      name: northwind-pod
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  template:
+    metadata:
+      name: northwind-pod
+      labels:
+        name: northwind-pod
+    spec:
+      containers:
+        - name: northwind-container
+          image: stackupiss/northwind-app:v2
+          imagePullPolicy: Always
+          env:
+            - name: DB_HOST
+              value: mydb-svc.myns.svc.cluster.local
+            - name: DB_PASSWORD
+              valueFrom:
                 secretKeyRef:
-                  name: northwind-db-secret
-                  key: MYSQL_ROOT_PASSWORD
-           - name: INSTANCE_IP_ADDRESS
-             valueFrom:
+                  name: northwind-secret
+                  key: DB_PASSWORD
+            - name: DB_USER
+              value: root
+            - name: INSTANCE_IP_ADDRESS
+              valueFrom:
                 fieldRef:
-                   fieldPath: status.podIP
-           envFrom:
-              - configMapRef:
-                 name: northwind-app-configmap
+                  fieldPath: status.podIP
+          ports:
+            - name: northwind-port
+              containerPort: 3000
+
+          livenessProbe:
+            periodSeconds: 60
+            httpGet:
+              port: northwind-port
+              path: /health
+          readinessProbe:
+            periodSeconds: 60
+            httpGet:
+              port: northwind-port
+              path: /ready
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: northwind-svc
+  namespace: northwind-ns
+  labels:
+    name: northwind-svc
+spec:
+  type: LoadBalancer
+  selector:
+    name: northwind-pod
+  ports:
+    - name: http
+      port: 80
+      targetPort: northwind-port
