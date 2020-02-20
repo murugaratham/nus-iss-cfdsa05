@@ -1,3 +1,12 @@
+--- 
+apiVersion: v1
+kind: ConfigMap
+metadata:
+   namespace: northwind-ns
+   name: northwind-app-configmap
+data:
+   DB_USER: root
+   DB_HOST: northwind-db-service.northwind-ns.svc.cluster.local
 ---
 apiVersion: v1
 kind: Secret
@@ -39,9 +48,12 @@ spec:
         - name: northwind-container
           image: stackupiss/northwind-app:v2
           imagePullPolicy: Always
+          envFrom:
+            - configMapRef:
+                name: northwind-app-configmap
           env:
-            - name: DB_HOST
-              value: mydb-svc.myns.svc.cluster.local
+            # - name: DB_HOST
+            #   value: northwind-db-service.northwind-ns.svc.cluster.local
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
@@ -56,17 +68,22 @@ spec:
           ports:
             - name: northwind-port
               containerPort: 3000
-
           livenessProbe:
             periodSeconds: 60
             httpGet:
               port: northwind-port
               path: /health
+            failureThreshold: 3
+            successThreshold: 1
+            timeoutSeconds: 15
           readinessProbe:
             periodSeconds: 60
             httpGet:
               port: northwind-port
               path: /ready
+            failureThreshold: 3
+            successThreshold: 1
+            timeoutSeconds: 15
 ---
 apiVersion: v1
 kind: Service
