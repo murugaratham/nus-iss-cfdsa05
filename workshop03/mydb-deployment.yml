@@ -1,29 +1,78 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+   name: northwind-db-configmap
+data:
+   MYSQL_DATABASE: northwind
+
+--- 
+apiVersion: v1
+kind: Secret
+metadata:
+   name: northwind-db-secret
+
+data:
+   MYSQL_ROOT_PASSWORD: Y2hhbmdlaXQ=
+
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: mydb
+   name: mydb-db-deploy
+   labels:
+      name: northwind-db
+      tier: data
+
 spec:
-  replicas: 1
+   replicas: 1
+   selector:
+      matchLabels:
+         name: northwind-db-pod
+   template:
+      metadata:
+         name: northwind-db-pod
+         labels:
+            name: northwind-db-pod
+      spec:
+        containers:
+        - name: northwind-db-container
+          image: stackupiss/northwind-db:v1
+          imagePullPolicy: Always
+          ports:
+           - name: mysql-port
+             containerPort: 3306
+          envFrom:
+          - configMapRef:
+              name: northwind-db-configmap
+          - secretRef:
+              name: northwind-db-secret
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mydb-svc
+spec:
   selector:
-    matchLabels:
-      app: mydb
-  template:
-    metadata:
-      labels:
-        app: mydb
-    spec:
-      containers:
-      - name: mydb
-        image: stackupiss/northwind-db:v1
-        env:
-        - name: "MYSQL_ROOT_PASSWORD"
-          value: "changeit"
-        - name: "MYSQL_DATABASE"
-          value: "northwind"
-        resources:
-          limits:
-            memory: "128Mi"
-            cpu: "500m"
-        ports:
-        - containerPort: 5000
-        
+    app: mydb
+  type: ClusterIP
+  ports:
+  - name: dbport
+    port: 3306
+    targetPort: 3306
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+
+metadata:
+  name: mydb-pvc
+  annotations:
+    volume.beta.kubernetes.io/storage-provisioner: "dobs.csi.digitalocean.com"
+  
+spec: 
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: do-block-storage

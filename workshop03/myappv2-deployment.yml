@@ -1,0 +1,105 @@
+--- 
+apiVersion: v1
+kind: ConfigMap
+metadata:
+   name: northwind-app-configmap
+data:
+   DB_USER: root
+   DB_HOST: northwind-db-service.northwind-ns.svc.cluster.local
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: northwind-secret
+  labels:
+    name: northwind-secret
+data:
+  DB_PASSWORD: Y2hhbmdlaXQ=
+---
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: myappv2-deploy
+  labels:
+    name: myapp
+    version: v2
+
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: myapp-pod-v2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  template:
+    metadata:
+      name: myapp-pod
+      labels:
+        name: myapp-pod-v2
+    spec:
+      containers:
+        - name: northwind-container
+          image: stackupiss/northwind-app:v2
+          imagePullPolicy: Always
+          envFrom:
+            - configMapRef:
+                name: northwind-app-configmap
+          env:
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: northwind-secret
+                  key: DB_PASSWORD
+            - name: DB_USER
+              value: root
+            - name: INSTANCE_IP_ADDRESS
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+          ports:
+            - name: myapp-port
+              containerPort: 3000
+          # livenessProbe:
+          #   periodSeconds: 60
+          #   httpGet:
+          #     port: myapp-port
+          #     path: /health
+          #   failureThreshold: 3
+          #   successThreshold: 1
+          #   timeoutSeconds: 15
+          # readinessProbe:
+          #   periodSeconds: 60
+          #   httpGet:
+          #     port: myapp-port
+          #     path: /ready
+          #   failureThreshold: 3
+          #   successThreshold: 1
+          #   timeoutSeconds: 15
+          # resources:
+          #   limits:
+          #     cpu: "1"
+          #     memory: "200Mi"
+          #   requests:
+          #     cpu: "0.5"
+          #     memory: "200Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: myapp-svcv2
+  labels:
+    name: myapp-svcv2
+    version: v2
+spec:
+  selector:
+    name: myapp-pod-v2
+    # version: v2
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 80
+    targetPort: 3000

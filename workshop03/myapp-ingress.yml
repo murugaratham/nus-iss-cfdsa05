@@ -1,0 +1,22 @@
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: myapp
+  annotations: 
+    nginx.ingress.kubernetes.io/rewrite-target: "/"
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+spec:
+  backend:
+    serviceName: myapp-svcv2
+    servicePort: 80
+  rules:
+  - http:
+      paths:
+      - path: /
+        backend:
+          serviceName: myapp-svcv2
+          servicePort: 80
+      - path: /v1
+        backend:
+          serviceName: myapp-svcv1
+          servicePort: 80
