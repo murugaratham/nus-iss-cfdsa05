@@ -1,0 +1,35 @@
+#157.230.193.77
+
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: fortune-gw
+spec:
+  selector: 
+    istio: ingressgateway
+  servers:
+  - port: 
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts: 
+    - fortune-app.157.230.193.77.nip.io
+
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: fortune-vs
+spec:
+  hosts:
+  - "*"
+  gateways: 
+  - fortune-gw.default.svc.cluster.local
+  http:
+  - match:
+    - uri: 
+        exact: /v1
+    route:
+    - destination:
+        host: fortuneapp-svc.default.svc.cluster.local
+      

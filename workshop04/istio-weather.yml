@@ -1,3 +1,5 @@
+#istio ip - 
+# 157.230.193.77
 ---
 apiVersion: v1
 kind: ConfigMap
